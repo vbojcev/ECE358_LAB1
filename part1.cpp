@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   ofstream output;
   output.open("out.csv");  //Outputting to forced file type "CSV" for data plotting
   output << "Utilization,E[n},P_idle\n";  //Setting up the column names
-  
+
   int numArrive = 0;  //Total arrived packets.
   int numDepart = 0;  //Total departed packets.
   int numObserve = 0; //Total observing events.
@@ -56,6 +56,8 @@ int main(int argc, char* argv[]) {
   float averageQueueSize = 0;  //Average number of packets in queue.
 
   for (float j = startRho * 10; j <= endRho * 10; j += 1) {
+    eventList.clear();
+
     float rho = j / 10;
 
     float currTime = 0;
@@ -100,7 +102,7 @@ int main(int argc, char* argv[]) {
     }
 
     sort(eventList.begin(), eventList.end(), compareTime);  //Automatically sorts the event list by order of time.
-    
+
     numArrive = 0;  //Total arrived packets.
     numDepart = 0;  //Total departed packets.
     numObserve = 0; //Total observing events.
