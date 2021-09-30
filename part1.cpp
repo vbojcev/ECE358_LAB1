@@ -46,6 +46,14 @@ int main(int argc, char* argv[]) {
   ofstream output;
   output.open("out.csv");  //Outputting to forced file type "CSV" for data plotting
   output << "Utilization,E[n},P_idle\n";  //Setting up the column names
+  
+  int numArrive = 0;  //Total arrived packets.
+  int numDepart = 0;  //Total departed packets.
+  int numObserve = 0; //Total observing events.
+  unsigned long int numQueue = 0;   //Running total of packets in queue, added at each observer event.
+  int numIdle = 0;    //Number of observer events at which arrivals == departures.
+  float averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
+  float averageQueueSize = 0;  //Average number of packets in queue.
 
   for (float j = startRho * 10; j <= endRho * 10; j += 1) {
     float rho = j / 10;
@@ -92,14 +100,14 @@ int main(int argc, char* argv[]) {
     }
 
     sort(eventList.begin(), eventList.end(), compareTime);  //Automatically sorts the event list by order of time.
-
-    int numArrive = 0;  //Total arrived packets.
-    int numDepart = 0;  //Total departed packets.
-    int numObserve = 0; //Total observing events.
-    unsigned long int numQueue = 0;   //Running total of packets in queue, added at each observer event.
-    int numIdle = 0;    //Number of observer events at which arrivals == departures.
-    float averageIdle;  //Proportion of oberver events at which arrivals == departures.
-    float averageQueueSize;  //Average number of packets in queue.
+    
+    numArrive = 0;  //Total arrived packets.
+    numDepart = 0;  //Total departed packets.
+    numObserve = 0; //Total observing events.
+    numQueue = 0;   //Running total of packets in queue, added at each observer event.
+    numIdle = 0;    //Number of observer events at which arrivals == departures.
+    averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
+    averageQueueSize = 0;  //Average number of packets in queue.
 
     for (int i = 0; i < eventList.size(); ++i) {  //We now iterate through the event list one last time, incrementing counters as we go and making calculations at observer events.
       switch(eventList[i].type) {
@@ -122,7 +130,7 @@ int main(int argc, char* argv[]) {
 
     output << rho << "," << averageQueueSize << "," << averageIdle << "\n";
 
-    cout << "E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
+    cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
   }
 
   output.close();
