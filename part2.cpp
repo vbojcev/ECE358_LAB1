@@ -76,10 +76,18 @@ int main(int argc, char* argv[]) {
     currTime = 0;
 
     int numArrivals = eventList.size();  //Total number of arrivals in the simulation time
-
+    int bufferCapacity = 0; //Number of events in buffer
+    int departures = 0; //Number of departures accounted for
     float transTime;  //Transmission time calculated for each packet
 
     for (int i = 0; i < numArrivals && currTime <= T; ++i) {
+      ++bufferCapacity;
+      for (int j = departures; j < i; j++) {
+        if (eventList[i].t >= eventList[numArrivals + j].t) {
+          --bufferCapacity;
+          ++departures;
+        }
+      }
       transTime = expVar((float)1/pktL)/(float)bitRate;  //We input 1/L for the exponential variable since we want the average to be 1/lambda = 1/(1/L) = L
       //Important: we can calculate a packet's lenth after it's arrived because we are assuming the arrival time is the point at which it has completely entered the buffer, not the point at which the first bit hits the input. Therefore, arrival is independent of packet length and the two variable can be independently determined.
       if (eventList[i].t > currTime) {  //Case where the arrival we're examining has occured more recently than the last departure (queue empty, instant servicing).
