@@ -49,9 +49,10 @@ int main(int argc, char* argv[]) {
     bufferSize = stoi(argv[6]);  //Sixth argument: size of the queue
   }
 
-  ofstream output;
-  output.open("out.csv");  //Outputting to forced file type "CSV" for data plotting
-  output << "Utilization,E[n},P_idle,P_loss\n";  //Setting up the column names
+  ofstream output1;
+  ofstream output2;
+  output1.open("q4_data1.txt");  //Outputting to text file
+  output2.open("q4_data2.txt");
 
   int numArrive = 0;  //Total arrived packets.
   int numArriveDropped = 0;  //Total arrived packets dropped.
@@ -158,12 +159,14 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    output << rho << "," << averageQueueSize << "," << averageIdle << "," << averageLoss << "\n";
+    output1 << rho << " " << averageQueueSize << "\n";
+    output2 << rho << " " << averageLoss << "\n";
 
     cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". P_loss = " << (float)averageLoss << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
   }
 
-  output.close();
+  output1.close();
+  output2.close();
 
   cout << "Program complete. Runtime: " << (unsigned)time(nullptr) - initTime << " seconds." << endl;
 
