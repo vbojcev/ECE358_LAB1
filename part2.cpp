@@ -17,6 +17,7 @@ float expVar(float rate) {  //Important to note that this is the AVERAGE RATE be
 struct event {  //Each event is only distinguished by its type and its time of occurence
   float t;
   int type;
+  bool dropped;
 };
 
 event adder;  //A modifiable instance of an event that is used to add new events to the vector
@@ -43,16 +44,23 @@ int main(int argc, char* argv[]) {
 
   int bitRate = stoi(argv[5]);  //Fifth argument: bitrate of the channel (both sides)
 
+  int bufferSize = 1;
+  if (argc > 6) {
+    bufferSize = stoi(argv[6]);  //Sixth argument: size of the queue
+  }
+
   ofstream output;
   output.open("out.csv");  //Outputting to forced file type "CSV" for data plotting
-  output << "Utilization,E[n},P_idle\n";  //Setting up the column names
+  output << "Utilization,E[n},P_idle,P_loss\n";  //Setting up the column names
 
   int numArrive = 0;  //Total arrived packets.
+  int numArriveDropped = 0;  //Total arrived packets dropped.
   int numDepart = 0;  //Total departed packets.
   int numObserve = 0; //Total observing events.
   unsigned long int numQueue = 0;   //Running total of packets in queue, added at each observer event.
   int numIdle = 0;    //Number of observer events at which arrivals == departures.
   float averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
+  float averageLoss = 0;  //Proportion of arrivals dropped.
   float averageQueueSize = 0;  //Average number of packets in queue.
 
   for (float j = startRho * 10; j <= endRho * 10; ++j) {
@@ -64,8 +72,6 @@ int main(int argc, char* argv[]) {
 
     float lam = (rho)*(bitRate)/(pktL);  //Calculate the average rate of arrivals based on utilization, bitrate, and average packet size.
 
-    //cout << lam << endl;
-
     while (currTime < T) {  //Generate arrivals until simulation time is reached
       currTime += expVar(lam);
       adder.t = currTime;
@@ -76,28 +82,35 @@ int main(int argc, char* argv[]) {
     currTime = 0;
 
     int numArrivals = eventList.size();  //Total number of arrivals in the simulation time
+    int numArrivalsDropped = 0;  //Number of arrivals dropped
     int bufferCapacity = 0; //Number of events in buffer
-    int departures = 0; //Number of departures accounted for
+    int departureIndex = 0; //Number of departures accounted for
+
     float transTime;  //Transmission time calculated for each packet
 
     for (int i = 0; i < numArrivals && currTime <= T; ++i) {
-      ++bufferCapacity;
-      for (int j = departures; j < i; j++) {
+      for (int j = departureIndex; j < i - numArrivalsDropped; j++) {  //Loops from last departure accounted for to most recent departure
         if (eventList[i].t >= eventList[numArrivals + j].t) {
           --bufferCapacity;
-          ++departures;
+          ++departureIndex;
         }
       }
-      transTime = expVar((float)1/pktL)/(float)bitRate;  //We input 1/L for the exponential variable since we want the average to be 1/lambda = 1/(1/L) = L
-      //Important: we can calculate a packet's lenth after it's arrived because we are assuming the arrival time is the point at which it has completely entered the buffer, not the point at which the first bit hits the input. Therefore, arrival is independent of packet length and the two variable can be independently determined.
-      if (eventList[i].t > currTime) {  //Case where the arrival we're examining has occured more recently than the last departure (queue empty, instant servicing).
-        currTime = (float)eventList[i].t + transTime;
-      } else {  //Case where a departure has occured after this arrival, meaning the departure time for this packet will be later since queue is nonempty.
-        currTime += transTime;
+      if (bufferCapacity == bufferSize) {
+        eventList[i].dropped = true;
+        ++numArrivalsDropped;
+      } else {
+        ++bufferCapacity;
+        transTime = expVar((float)1/pktL)/(float)bitRate;  //We input 1/L for the exponential variable since we want the average to be 1/lambda = 1/(1/L) = L
+        //Important: we can calculate a packet's lenth after it's arrived because we are assuming the arrival time is the point at which it has completely entered the buffer, not the point at which the first bit hits the input. Therefore, arrival is independent of packet length and the two variable can be independently determined.
+        if (eventList[i].t > currTime) {  //Case where the arrival we're examining has occured more recently than the last departure (queue empty, instant servicing).
+          currTime = (float)eventList[i].t + transTime;
+        } else {  //Case where a departure has occured after this arrival, meaning the departure time for this packet will be later since queue is nonempty.
+          currTime += transTime;
+        }
+        adder.t = currTime;
+        adder.type = DEPARTURE;
+        eventList.push_back(adder);
       }
-      adder.t = currTime;
-      adder.type = DEPARTURE;
-      eventList.push_back(adder);
     }
 
     currTime = 0;
@@ -112,17 +125,23 @@ int main(int argc, char* argv[]) {
     sort(eventList.begin(), eventList.end(), compareTime);  //Automatically sorts the event list by order of time.
 
     numArrive = 0;  //Total arrived packets.
+    numArriveDropped = 0;  //Total arrived packets dropped.
     numDepart = 0;  //Total departed packets.
     numObserve = 0; //Total observing events.
     numQueue = 0;   //Running total of packets in queue, added at each observer event.
     numIdle = 0;    //Number of observer events at which arrivals == departures.
     averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
+    averageLoss = 0;  //Proportion of arrivals dropped.
     averageQueueSize = 0;  //Average number of packets in queue.
 
     for (int i = 0; i < eventList.size(); ++i) {  //We now iterate through the event list one last time, incrementing counters as we go and making calculations at observer events.
       switch(eventList[i].type) {
         case ARRIVAL:
-          ++numArrive;
+          if (!eventList[i].dropped) {
+            ++numArrive;
+          } else {
+            ++numArriveDropped;
+          }
           break;
         case DEPARTURE:
           ++numDepart;
@@ -134,13 +153,14 @@ int main(int argc, char* argv[]) {
             ++numIdle;
           }
           averageIdle = (float)numIdle/numObserve;
+          averageLoss = (float)numArriveDropped/(numArrive + numArriveDropped);
           averageQueueSize = (float)numQueue/numObserve;
       }
     }
 
-    output << rho << "," << averageQueueSize << "," << averageIdle << "\n";
+    output << rho << "," << averageQueueSize << "," << averageIdle << "," << averageLoss << "\n";
 
-    cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
+    cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". P_loss = " << (float)averageLoss << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
   }
 
   output.close();
