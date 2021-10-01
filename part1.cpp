@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
   int initTime = (unsigned)time(nullptr);
 
-  srand(initTime);
+  srand(initTime);  //Initialize seed for pseudorandom uniform generator
 
   float T = stof(argv[1]);  //First argument: simulation time
 
@@ -43,9 +43,10 @@ int main(int argc, char* argv[]) {
 
   int bitRate = stoi(argv[5]);  //Fifth argument: bitrate of the channel (both sides)
 
-  ofstream output;
-  output.open("out.csv");  //Outputting to forced file type "CSV" for data plotting
-  output << "Utilization,E[n},P_idle\n";  //Setting up the column names
+  ofstream output1;
+  ofstream output2;
+  output1.open("q3_data1.txt");  //Outputting to text file
+  output2.open("q3_data2.txt");
 
   int numArrive = 0;  //Total arrived packets.
   int numDepart = 0;  //Total departed packets.
@@ -54,17 +55,20 @@ int main(int argc, char* argv[]) {
   int numIdle = 0;    //Number of observer events at which arrivals == departures.
   float averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
   float averageQueueSize = 0;  //Average number of packets in queue.
+  float rho;  //Utilization factor
+  float currTime;  //For keeping track of simulation runtime
+  float lam;  //average rate of arrival of packets, in pkt/s
+  int numArrivals;  //Total running number of arrivals.
+  float transTime;  //Transmission time L/C. 
 
   for (float j = startRho * 10; j <= endRho * 10; ++j) {
     eventList.clear();
 
-    float rho = j / 10;
+    rho = j / 10;
 
-    float currTime = 0;
+    currTime = 0;
 
-    float lam = (rho)*(bitRate)/(pktL);  //Calculate the average rate of arrivals based on utilization, bitrate, and average packet size.
-
-    //cout << lam << endl;
+    lam = (rho)*(bitRate)/(pktL);  //Calculate the average rate of arrivals based on utilization, bitrate, and average packet size.
 
     while (currTime < T) {  //Generate arrivals until simulation time is reached
       currTime += expVar(lam);
@@ -75,9 +79,7 @@ int main(int argc, char* argv[]) {
 
     currTime = 0;
 
-    int numArrivals = eventList.size();  //Total number of arrivals in the simulation time
-
-    float transTime;  //Transmission time calculated for each packet
+    numArrivals = eventList.size();  //Total number of arrivals in the simulation time
 
     for (int i = 0; i < numArrivals && currTime <= T; ++i) {
       transTime = expVar((float)1/pktL)/(float)bitRate;  //We input 1/L for the exponential variable since we want the average to be 1/lambda = 1/(1/L) = L
@@ -130,13 +132,15 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    output << rho << "," << averageQueueSize << "," << averageIdle << "\n";
+    output1 << rho << " " << averageQueueSize << "\n";
+    output2 << rho << " " << averageIdle << "\n";
 
-    cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
+    cout << "Rho: " << rho << ". E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
   }
 
-  output.close();
-
+  output1.close();
+  output2.close();
+  
   cout << "Program complete. Runtime: " << (unsigned)time(nullptr) - initTime << " seconds." << endl;
 
 }
