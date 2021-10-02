@@ -6,7 +6,7 @@
 using namespace std;
 
 float lam;  //Exponential parameter
-float U =;  //Uniform random variable on [0,1]
+float U;  //Uniform random variable on [0,1]
 float dataSet[1000];  //Array of outputs
 float x;  //Exponential random variable
 float sum = 0;  //For calculating mean
