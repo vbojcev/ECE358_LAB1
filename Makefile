@@ -1,7 +1,16 @@
+compileExp: exp.cpp
+	g++ -o exp exp.cpp
+
+runExp: exp
+	./exp 75
+
+cleanExp:
+	rm exp
+
 compileP1: part1.cpp
 	 g++ -o part1 part1.cpp
 
-simulateP1: part1
+runP1: part1
 
 	./part1 2000 0.25 0.95 2000 1000000
 
@@ -17,3 +26,11 @@ cleanP1:
 	rm q3_data1.txt
 	rm q3_data2.txt
 	rm part1
+
+compileP2: part2_v2.cpp
+	g++ -o part2 part2.cpp
+
+runP2: part2
+
+cleanP2:
+	rm part2
