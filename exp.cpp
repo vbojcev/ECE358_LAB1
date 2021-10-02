@@ -23,9 +23,7 @@ int main(int argc, char* argv[]) {
     return 1;
     
   } else {
-  
-    cout << "Lambda chosen: " << argv[1] << endl;
-  
+
     lam = stof(argv[1]);
     
     cout << "lambda is: " << lam << endl;
