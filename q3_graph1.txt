@@ -2,7 +2,7 @@ set title "Average Number of Packets in Queue vs Utilization"
 set xlabel "Utilization"
 set ylabel "Average Number of Packets in Queue"
 set xrange [0:1]
-set yrange [0:6]
+set yrange [0:20]
 # no "key" or "legend" required
 unset key
 # use a png file for output
