@@ -8,7 +8,7 @@
 
 using namespace std;
 
-enum eventType {ARRIVAL, DEPARTURE, OBSERVER, DROPPED};  //Three possible types of events
+enum eventType {ARRIVAL, DEPARTURE, OBSERVER, DROPPED};  //Four possible types of events
 
 float expVar(float rate) {  //Important to note that this is the AVERAGE RATE being input, applicable directly for the rate of arrivals. For packet length, we know the average OF the random variable, therefore we will input 1/L
   return (float)-(1/rate)*log(1-((float)(rand()%1000)/1000));
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   int bitRate = stoi(argv[5]);  //Fifth argument: bitrate of the channel (both sides)
   
   int buffSize;
-  int buffRange[3] = {10, 25, 50};
+  int buffRange[3] = {10, 25, 50};  //We could make this a user input but it was not necessary.
   
   ofstream output1;
   ofstream output2;
@@ -63,9 +63,9 @@ int main(int argc, char* argv[]) {
   float lam;  //average rate of arrival of packets, in pkt/s
   int numArrivals;  //Total running number of arrivals.
   float transTime;  //Transmission time L/C.
-  int k;
-  int queueRemain;
-  int numDropped;
+  int k;  //An iterator for queue status-checking.
+  int queueRemain;  //A variable for keeping track of how many empty spots there are in the queue.
+  int numDropped;  //Total number of dropped packets.
 
   for (float j = startRho * 10; j <= endRho * 10; ++j) {
 
@@ -84,13 +84,14 @@ int main(int argc, char* argv[]) {
     
       buffSize = buffRange[b];
       
-      //cout << "using buffer size " << buffSize << ", Rho " << rho << endl;
-      
-      while (currTime < T) {  //Generate arrivals (attempted) until simulation time is reached
-      currTime += expVar(lam);
-      adder.t = currTime;
-      adder.type = ARRIVAL;
-      eventList.push_back(adder);
+      while (currTime < T) {
+        /*Generate arrivals (attempted) until simulation time is reached.
+        This code is unchanged from the infinite queue case because we
+        simply change our interpretation of what "arrival" means!*/
+        currTime += expVar(lam);
+        adder.t = currTime;
+        adder.type = ARRIVAL;
+        eventList.push_back(adder);
       }
 
       currTime = 0;
@@ -110,11 +111,20 @@ int main(int argc, char* argv[]) {
           adder.type = DEPARTURE;
           eventList.push_back(adder);
           
+          /*
+          Only the code from here until the end of this "Departures" loop has changed significantly. At each
+          departure calculation of a valid arrival (front of the queue), we check forward in time until this packet's
+          departure time. If we have more arrivals (not counting those that have already been considered "dropped"
+          by a previous iteration of the loop) than the size of the buffer, any arrivals counted between the end of
+          the buffer and the current packet's arrival time are considered "dropped".
+          */
+          
           k = i+1;
           
           queueRemain = buffSize - 1;
           
           while (eventList[k].t <= currTime && k < numArrivals) {
+            //Here, we only care about the packets that attempt to arrive before the current packet's departure.
             if (eventList[k].type == ARRIVAL && queueRemain) {
               --queueRemain;
             } else if (eventList[k].type == ARRIVAL && !queueRemain) {
@@ -127,7 +137,9 @@ int main(int argc, char* argv[]) {
   
       currTime = 0;
   
-      while (currTime < T) {  //Observers are generated in the exact same way as arrivals, but with a faster rate.
+      while (currTime < T) {
+        //Observers are generated in the exact same way as arrivals, but with a faster rate.
+        //This code is unchanged from the infinite queue case.
         currTime += expVar(lam*5);
         adder.t = currTime;
         adder.type = OBSERVER;
@@ -168,7 +180,7 @@ int main(int argc, char* argv[]) {
         
       }
       
-      cout << numDropped << "  " << "K=" << buffSize << ", r=" << rho << endl;
+      cout << "K=" << buffSize << ", r=" << rho << ", E[n]=" << averageQueueSize << ", P_loss=" << (float)numDropped/(numArrive+numDropped) << endl;
       
       output1 << " " << averageQueueSize;
       output2 << " " << (float)numDropped/(numArrive+numDropped);
