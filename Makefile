@@ -1,3 +1,4 @@
+
 compileExp: exp.cpp
 	g++ -o exp exp.cpp
 
@@ -25,18 +26,18 @@ cleanP1:
 	rm part1
 
 compileP2: part2_v2.cpp
-	g++ -o part2 part2.cpp
+	g++ -o part2 part2_v2.cpp
 
 runP2: part2
-	./part2 2000 0.5 1.5 2000 1000000
+	./part2 1000 0.5 1.5 2000 1000000
 
-plotP2: q4_graph1.txt q4_graph2.txt
-	gnuplot q4_graph1.txt
-	gnuplot q4_graph2.txt
+plotP2: q6_graph1.txt q6_graph2.txt
+	gnuplot q6_graph1.txt
+	gnuplot q6_graph2.txt
 
 cleanP2:
-	rm q4_graph1.png
-	rm q4_graph2.png
-	rm q4_data1.txt
-	rm q4_data2.txt
+	rm q6_graph1.png
+	rm q6_graph2.png
+	rm q6_data1.txt
+	rm q6_data2.txt
 	rm part2

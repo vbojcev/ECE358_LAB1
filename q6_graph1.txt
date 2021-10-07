@@ -1,0 +1,14 @@
+set title "Average Number of Packets in Queue vs Utilization"
+set xlabel "Utilization"
+set ylabel "Average Number of Packets in Queue"
+set xrange [0.5:1.5]
+set yrange [0:50]
+# no "key" or "legend" required
+unset key
+# use a png file for output
+set term png
+set output "q6_graph1.png"
+# plot lines and points, with solid dots as the markers
+plot 'q6_data1.txt' using 1:2 title "10" with linespoint pointtype 7, \
+     'q6_data1.txt' using 1:3 title "25" with linespoint pointtype 7, \
+     'q6_data1.txt' using 1:4 title "50" with linespoint pointtype 7, \

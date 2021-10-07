@@ -43,12 +43,13 @@ int main(int argc, char* argv[]) {
 
   int bitRate = stoi(argv[5]);  //Fifth argument: bitrate of the channel (both sides)
   
-  int buffSize = stoi(argv[6]);
-
+  int buffSize;
+  int buffRange[3] = {10, 25, 50};
+  
   ofstream output1;
   ofstream output2;
-  output1.open("q3_data1.txt");  //Outputting to text file
-  output2.open("q3_data2.txt");
+  output1.open("q6_data1.txt");  //Outputting to text file
+  output2.open("q6_data2.txt");
 
   int numArrive = 0;  //Total arrived packets.
   int numDepart = 0;  //Total departed packets.
@@ -64,97 +65,119 @@ int main(int argc, char* argv[]) {
   float transTime;  //Transmission time L/C.
   int k;
   int queueRemain;
+  int numDropped;
 
   for (float j = startRho * 10; j <= endRho * 10; ++j) {
-    eventList.clear();
 
     rho = j / 10;
 
-    currTime = 0;
-
     lam = (rho)*(bitRate)/(pktL);  //Calculate the average rate of arrivals based on utilization, bitrate, and average packet size.
+    
+    output1 << rho;
+    output2 << rho;
 
-    while (currTime < T) {  //Generate arrivals (attempted) until simulation time is reached
+    for (int b = 0; b < 3; ++b) {
+    
+      eventList.clear();
+      
+      currTime = 0;
+    
+      buffSize = buffRange[b];
+      
+      //cout << "using buffer size " << buffSize << ", Rho " << rho << endl;
+      
+      while (currTime < T) {  //Generate arrivals (attempted) until simulation time is reached
       currTime += expVar(lam);
       adder.t = currTime;
       adder.type = ARRIVAL;
       eventList.push_back(adder);
-    }
+      }
 
-    currTime = 0;
+      currTime = 0;
+  
+      numArrivals = eventList.size();  //Total number of arrivals (attempted) in the simulation time
 
-    numArrivals = eventList.size();  //Total number of arrivals (attempted) in the simulation time
-
-    for (int i = 0; i < numArrivals && currTime <= T; ++i) {
-      
-      if (eventList[i].type == ARRIVAL) {
-        transTime = expVar((float)1/pktL)/(float)bitRate;
-        if (eventList[i].t > currTime) {
-          currTime = (float)eventList[i].t + transTime;
-        } else{
-          currTime += transTime;
+      for (int i = 0; i < numArrivals && currTime <= T; ++i) {
+        
+        if (eventList[i].type == ARRIVAL) {
+          transTime = expVar((float)1/pktL)/(float)bitRate;
+          if (eventList[i].t > currTime) {
+            currTime = (float)eventList[i].t + transTime;
+          } else{
+            currTime += transTime;
+          }
+          adder.t = currTime;
+          adder.type = DEPARTURE;
+          eventList.push_back(adder);
+          
+          k = i+1;
+          
+          queueRemain = buffSize - 1;
+          
+          while (eventList[k].t <= currTime && k < numArrivals) {
+            if (eventList[k].type == ARRIVAL && queueRemain) {
+              --queueRemain;
+            } else if (eventList[k].type == ARRIVAL && !queueRemain) {
+              eventList[k].type = DROPPED;
+            }
+            ++k;
+          }
         }
+      }
+  
+      currTime = 0;
+  
+      while (currTime < T) {  //Observers are generated in the exact same way as arrivals, but with a faster rate.
+        currTime += expVar(lam*5);
         adder.t = currTime;
-        adder.type = DEPARTURE;
+        adder.type = OBSERVER;
         eventList.push_back(adder);
-        
-        k = i+1;
-        
-        queueRemain = buffSize - 1;
-        
-        while (eventList[k].t <= currTime && k < numArrivals) {
-          if (eventList[k].type == ARRIVAL && queueRemain) {
-            --queueRemain;
-          } else if (eventList[k].type == ARRIVAL && !queueRemain) {
-            eventList[k].type = DROPPED;
-          }
-          ++k;
+      }
+  
+      sort(eventList.begin(), eventList.end(), compareTime);  //Automatically sorts the event list by order of time.
+  
+      numArrive = 0;  //Total arrived packets.
+      numDepart = 0;  //Total departed packets.
+      numObserve = 0; //Total observing events.
+      numQueue = 0;   //Running total of packets in queue, added at each observer event.
+      numIdle = 0;    //Number of observer events at which arrivals == departures.
+      averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
+      averageQueueSize = 0;  //Average number of packets in queue.
+      numDropped = 0;
+  
+      for (int i = 0; i < eventList.size(); ++i) {  //We now iterate through the event list one last time, incrementing counters as we go and making calculations at observer events.
+        switch(eventList[i].type) {
+          case ARRIVAL:
+            ++numArrive;
+            break;
+          case DEPARTURE:
+            ++numDepart;
+            break;
+          case DROPPED:
+            ++numDropped;
+            break;
+          case OBSERVER:
+            ++numObserve;
+            numQueue += numArrive - numDepart;  //The danger here is that if the utilization factor or packet size is too large, there is a possibility this value could overflow.
+            if (numArrive == numDepart) {
+              ++numIdle;
+            }
+            averageIdle = (float)numIdle/numObserve;
+            averageQueueSize = (float)numQueue/numObserve;
         }
+        
       }
+      
+      cout << numDropped << "  " << "K=" << buffSize << ", r=" << rho << endl;
+      
+      output1 << " " << averageQueueSize;
+      output2 << " " << (float)numDropped/(numArrive+numDropped);
+
     }
+    
+    output1 << "\n";
+    output2 << "\n";
 
-    currTime = 0;
-
-    while (currTime < T) {  //Observers are generated in the exact same way as arrivals, but with a faster rate.
-      currTime += expVar(lam*5);
-      adder.t = currTime;
-      adder.type = OBSERVER;
-      eventList.push_back(adder);
-    }
-
-    sort(eventList.begin(), eventList.end(), compareTime);  //Automatically sorts the event list by order of time.
-
-    numArrive = 0;  //Total arrived packets.
-    numDepart = 0;  //Total departed packets.
-    numObserve = 0; //Total observing events.
-    numQueue = 0;   //Running total of packets in queue, added at each observer event.
-    numIdle = 0;    //Number of observer events at which arrivals == departures.
-    averageIdle = 0;  //Proportion of oberver events at which arrivals == departures.
-    averageQueueSize = 0;  //Average number of packets in queue.
-
-    for (int i = 0; i < eventList.size(); ++i) {  //We now iterate through the event list one last time, incrementing counters as we go and making calculations at observer events.
-      switch(eventList[i].type) {
-        case ARRIVAL:
-          ++numArrive;
-          break;
-        case DEPARTURE:
-          ++numDepart;
-          break;
-        case OBSERVER:
-          ++numObserve;
-          numQueue += numArrive - numDepart;  //The danger here is that if the utilization factor or packet size is too large, there is a possibility this value could overflow.
-          if (numArrive == numDepart) {
-            ++numIdle;
-          }
-          averageIdle = (float)numIdle/numObserve;
-          averageQueueSize = (float)numQueue/numObserve;
-      }
-    }
-
-    output1 << rho << " " << averageQueueSize << "\n";
-    output2 << rho << " " << averageIdle << "\n";
-
-    cout << "Rho: " << rho << ".E[n] = " << (float)averageQueueSize << ". P_idle = " << (float)averageIdle << ". Arrivals: " << numArrive << ". Departures: " << numDepart << ". Obervers: " << numObserve << endl;
   }
 
   output1.close();
