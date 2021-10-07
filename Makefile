@@ -19,11 +19,11 @@ plotP1: q3_graph1.txt q3_graph2.txt
 	gnuplot q3_graph2.txt
 
 cleanP1:
+	rm part1
 	rm q3_graph1.png
 	rm q3_graph2.png
 	rm q3_data1.txt
 	rm q3_data2.txt
-	rm part1
 
 compileP2: part2_v2.cpp
 	g++ -o part2 part2_v2.cpp
@@ -36,8 +36,8 @@ plotP2: q6_graph1.txt q6_graph2.txt
 	gnuplot q6_graph2.txt
 
 cleanP2:
+	rm part2
 	rm q6_graph1.png
 	rm q6_graph2.png
 	rm q6_data1.txt
 	rm q6_data2.txt
-	rm part2
