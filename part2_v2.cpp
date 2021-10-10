@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
           
           k = i+1;
           
-          queueRemain = buffSize - 1;
+          queueRemain = buffSize - 1;  //The -1 is to account for the packet departing.
           
           while (eventList[k].t <= currTime && k < numArrivals) {
             //Here, we only care about the packets that attempt to arrive before the current packet's departure.
